@@ -1,0 +1,23 @@
+[
+  {
+    "file": "curves_fixedquery.csv",
+    "rows": 2833,
+    "datasets": 24,
+    "sha256": "fd8c4b84bbdaaa41",
+    "mib": 0.5
+  },
+  {
+    "file": "curves_seed42.csv",
+    "rows": 2991,
+    "datasets": 24,
+    "sha256": "70281e63941b6a75",
+    "mib": 0.53
+  },
+  {
+    "file": "curves_seed43.csv",
+    "rows": 2863,
+    "datasets": 24,
+    "sha256": "d06e770203b7a409",
+    "mib": 0.45
+  }
+]
