@@ -1,0 +1,9 @@
+# Everything 02_analysis.ipynb needs. No GPU, no network.
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+# to run the notebook rather than read it
+jupyter>=1.0
+nbconvert>=7.0
+# to run the unit tests
+pytest>=7.0
