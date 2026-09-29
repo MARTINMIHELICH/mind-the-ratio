@@ -59,6 +59,10 @@ grows**: the 102-row episode wins up to 128 rows of context, the 512-row episode
 256 and 512, and the 1638-row episode from 1024 upward. No single episode length wins
 everywhere, and the longest never wins at small contexts.
 
+The same table drawn against the raw deployment context, rather than the ratio:
+
+![AUC gain against deployment context](figures/auc_by_context.png)
+
 The winners' ratios are 0.31, 0.63, 1.25, 0.50, 1.00, 0.63, 1.25 and 3.96 — six of the
 eight between
 0.5 and 1.3, but not a rule: at 128 and at 512 rows of context the winner is *not* the
@@ -224,7 +228,7 @@ binary classification it leaves AUC exactly unchanged. Designed, not run.
 data/          three runs, one CSV each, with a MANIFEST
 ft_window/     advise() and check(), no dependencies
 tests/         24 unit tests — python -m pytest tests/
-notebooks/     01 audit (CPU) · 02 analysis (CPU, English) · 03, 03b, 04 experiments (GPU)
+notebooks/     01 audit (CPU) · 02 analysis (CPU) · 03, 03b, 04 experiments (GPU)
 figures/
 ```
 
