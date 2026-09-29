@@ -1,12 +1,19 @@
 # Mind the ratio
 
 **Fine-tuning TabPFN tunes it to a context length.** What decides whether it helps is
-not how much data you fine-tune on, but the ratio between the episode it trains on
-and the context it will see when you deploy it.
+not how much data you fine-tune on, but how the length of a training episode compares
+with the context the model will see when you deploy it. Fine-tune on episodes much
+shorter than that context and the model comes out **worse than if you had not
+fine-tuned at all**.
+
+The compact way to write the comparison is a ratio:
 
 ```
 ratio = rows in the inference context / rows in a fine-tuning episode
 ```
+
+It is a summary, not a law, and §"What the ratio does and does not capture" below
+says exactly where it holds and where it breaks.
 
 Everything below comes from 24 binary OpenML tasks, three independent runs, 200
 gradient steps. **Every number is reproducible in thirty seconds with no GPU** —
@@ -24,10 +31,12 @@ jupyter nbconvert --execute --to notebook --inplace notebooks/02_analysis.ipynb
 
 ![AUC against the ratio](figures/auc_vs_ratio.png)
 
-Three fine-tuning episode lengths, swept across every deployment context. Each curve
-**rises, peaks between a ratio of 0.1 and 0.6, and crosses into negative past 1 to 4**.
-The ratio sets *where* the peak falls; the absolute size of the context sets *how much*
-there is to gain, which is why the three curves share a shape but not a height.
+Three fine-tuning episode lengths, swept across every deployment context. Every curve
+**rises, peaks, then crosses into negative**. The three share that shape but neither
+their height nor the exact position of their peak: in AUC the peaks sit at ratios of
+0.63, 0.25 and 0.08, so they do not define one common optimum. What they do share is
+the sign change, and the fact that it always happens on the same side — at large
+contexts, never at small ones.
 
 ## The one table
 
@@ -45,9 +54,16 @@ populations. `r` is the ratio.
 | **2048** | −0.0094 `r=20.1` | −0.0042 `r=4.00` | **+0.0002** `r=1.25` |
 | **full train** | −0.0088 `r=63.5` | −0.0048 `r=12.7` | **−0.0024** `r=3.96` |
 
-Read it row by row. **In every row the winner is the episode whose ratio is closest
-to 0.5 — and the winning column moves right as the deployment context grows.**
-The ratios of the seven winners: 0.63, 1.25, 0.50, 1.00, 0.63, 1.25, 3.96.
+Read it row by row. **The winning column moves right as the deployment context
+grows**: the 102-row episode wins up to 128 rows of context, the 512-row episode at
+256 and 512, and the 1638-row episode from 1024 upward. No single episode length wins
+everywhere, and the longest never wins at small contexts.
+
+The winners' ratios are 0.31, 0.63, 1.25, 0.50, 1.00, 0.63, 1.25 and 3.96 — six of the
+eight between
+0.5 and 1.3, but not a rule: at 128 and at 512 rows of context the winner is *not* the
+episode closest to that band. The ratio locates the good region; it does not pick the
+winner cell by cell.
 
 ## When this changes what you do
 
@@ -71,28 +87,54 @@ across this table, and the bottom-left cells are where the damage is.
 
 ## Bigger is not always better
 
-The curve rises and then falls, so "use the longest episode you can afford" is not a
-law. It is what you observe when every episode you *can* afford happens to sit on one
-side of the optimum.
+"Use the longest episode you can afford" is not a law. It is what you observe when
+every episode you *can* afford is still shorter than the context you deploy with.
 
 ![where the episodes fall](figures/where_the_episodes_fall.png)
 
-Read it row by row. The winning episode, ringed, is always the one nearest the shaded
-band — never simply the longest.
-
-* **Below 256 rows of deployment context the three episodes straddle the optimum, and
-  the shortest wins.** At 64 rows, the 102-row episode gives **+0.0264** against
-  **+0.0068** for the 1638-row one: four times more, for a sixteenth of the memory.
-* **From 1024 rows upward all three sit to the right of the optimum, so the longest
-  wins** — but that is a fact about our grid, not about length. 1638 context rows is
-  simply the largest episode a T4 holds on tables of up to 110 features. An episode
-  twice as long would land inside the band at a deployment context of 2048, and past
-  it beyond.
+* **Below 256 rows of deployment context the shortest episode wins.** At 64 rows the
+  102-row episode gives **+0.0264** against **+0.0068** for the 1638-row one: four
+  times more, for a sixteenth of the memory.
+* **From 1024 rows upward the longest wins** — but that is a fact about this grid, not
+  about length. 1638 context rows is simply the largest episode a T4 holds on tables of
+  up to 110 features, and at those contexts all three episodes are still on the short
+  side. We cannot see what a longer one would do, because we could not fit one.
 
 So "longer is better" holds wherever GPU memory keeps every affordable episode shorter
-than the optimum — which is where the published work sits, and where most practitioners
-are. It is a consequence of the memory ceiling, not a property of length. Lift the
-ceiling and the advice expires.
+than the deployment context — which is where the published work sits, and where most
+practitioners are. It is a consequence of the memory ceiling as much as a property of
+length. Lift the ceiling and the advice would need re-testing.
+
+## What the ratio does and does not capture
+
+The ratio is a compact summary. It earns that status on one axis and not on another,
+and the difference is worth stating plainly rather than leaving a reader to find it.
+
+**Where it holds.** At a matched ratio, changing the episode length sixteen-fold moves
+the relative log-loss gain by 0.3 to 1.2 points and never significantly, while the
+ratio itself moves it from +6% to −7%. The relative log-loss peaks sit at ratios of
+0.63, 0.50 and 0.31 for the three episode lengths — within a factor of two of one
+another.
+
+**Where it breaks.** In AUC the peaks sit at 0.63, 0.25 and 0.08: a factor of eight,
+which is no common optimum at all. And the sign change does not happen at a fixed
+ratio either:
+
+| episode | context where the AUC gain crosses zero | ratio there |
+|--:|--:|--:|
+| 102 rows | ~856 rows | 8.4 |
+| 512 rows | ~1454 rows | 2.8 |
+| 1638 rows | ~2251 rows | 1.4 |
+
+**Read that table as the real finding.** A longer episode does push the crossing out —
+856, then 1454, then 2251 rows — which is the useful, robust claim. But it pushes it
+out **sub-proportionally**: a sixteen-fold longer episode buys only 2.6 times more
+deployable context. Expressed as a ratio, the crossing therefore falls from 8.4 to 1.4
+rather than staying put.
+
+So: use the ratio to locate the regime you are in, and to see that the two lengths must
+be chosen together. Do not use it as a constant you can solve for. The quantity that
+behaves predictably is the direction of the effect, not its threshold.
 
 ## Too short is expensive
 
@@ -186,7 +228,7 @@ notebooks/     01 audit (CPU) · 02 analysis (CPU, English) · 03, 03b, 04 exper
 figures/
 ```
 
-The GPU notebooks carry an English header; their bodies are in French, the language the
-research was conducted in. `02_analysis.ipynb`, the one you run, is English throughout.
+Every notebook is in English. `02_analysis.ipynb` is the one to run: it needs no GPU and
+recomputes every number and both figures from the committed CSVs.
 
 MIT licensed.
