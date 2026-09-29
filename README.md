@@ -158,8 +158,11 @@ negative. The cost is memory and time, not accuracy.
 
 ## What the literature does with these two lengths
 
-Every study we found sets both with a single number, so their ratio never varies and
-the effect cannot appear.
+No study we found treats these two lengths as separate variables. Some tie them
+together by construction; in the others the ratio drifts as an uncontrolled
+by-product of dataset size. Either way it is never set, never reported, never
+discussed — so the effect is present in the published data without being visible in
+the published analysis.
 
 | Study | How the two lengths are set | Ratio |
 |---|---|---|
@@ -171,6 +174,13 @@ the effect cannot appear.
 The 1.25 is not a coincidence: fine-tuning on an 80/20 split and then evaluating with
 the *whole* training set as context gives 1/0.8 exactly. Verbatim quotes for each row
 are in `notebooks/02_analysis.ipynb`.
+
+The two rows whose ratio does move are the interesting ones, because the effect
+should already be in their results. Real-TabPFN's Figure 4 is the closest thing to an
+off-diagonal sweep in print: across their per-dataset gains, the ratio implied by
+each dataset's size correlates with the reported gain at Spearman ρ = 0.95
+(p = 0.014). That is a re-analysis of their published numbers, not a claim about
+their intent — the axis simply was not the one they were looking along.
 
 ## The library's defaults
 
@@ -232,7 +242,14 @@ notebooks/     01 audit (CPU) · 02 analysis (CPU) · 03, 03b, 04 experiments (G
 figures/
 ```
 
-Every notebook is in English. `02_analysis.ipynb` is the one to run: it needs no GPU and
-recomputes every number and both figures from the committed CSVs.
+`02_analysis.ipynb` is the one to run: it needs no GPU and recomputes every number and
+every figure from the committed CSVs, in about thirty seconds.
 
-MIT licensed.
+**Data.** The three CSVs in `data/` are the raw measurements and are committed here, so
+nothing needs downloading to reproduce the analysis. They were produced from 24 binary
+classification tasks of [OpenML suite 457](https://www.openml.org/search?type=study&id=457);
+the task ids are frozen at the top of each experiment notebook, and `03`, `03b` and `04`
+re-download them from OpenML directly. Outer fold 0 of every task is sealed and never
+read.
+
+Licensed under the Apache License, Version 2.0 — see `LICENSE`.
